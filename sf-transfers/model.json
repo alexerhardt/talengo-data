@@ -70,7 +70,9 @@
   },
   "Contact": {
     "refs": [],
-    "exclusions": []
+    "exclusions": [
+      "Curriculum_Vitae__c"
+    ]
   },
   "Product2": {
     "refs": [],
