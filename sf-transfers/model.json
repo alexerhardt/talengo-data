@@ -1,0 +1,83 @@
+{
+  "compensation__c": {
+    "refs": {
+      "Team_Id__c": "Equipo_de_trabajo__c",
+      "PNB__Id__c": "Opportunity",
+      "Id_Referencia__c": "Order"
+    },
+    "exclusions": []
+  },
+  "Equipo_de_trabajo__c": {
+    "refs": {
+      "Proceso__c": "Asset",
+      "Referencia__c": "Order"
+    },
+    "exclusions": [
+      "Contacto__c"
+    ]
+  },
+  "Asset": {
+    "refs": {
+      "AccountId": "Account",
+      "Product2Id": "Product2"
+    },
+    "exclusions": [
+      "AssetServicedById",
+      "AssetProvidedById",
+      "ParentId",
+      "RootAssetId",
+      "Receptor_de_Progress__c",
+      "ContactId",
+      "LocationId"
+    ]
+  },
+  "Order": {
+    "refs": {
+      "AccountId": "Account",
+      "OpportunityId": "Opportunity",
+      "QuoteId": "Quote"
+    },
+    "exclusions": [
+      "ShipToContactId",
+      "BillToContactId",
+      "CustomerAuthorizedById",
+      "ContractId"
+    ]
+  },
+  "Quote": {
+    "refs": {
+      "AccountId": "Account",
+      "OpportunityId": "Opportunity",
+      "Referencia__c": "Order"
+    },
+    "exclusions": [
+      "ContractId",
+      "ContactId"
+    ]
+  },
+  "Opportunity": {
+    "refs": {
+      "AccountId": "Account",
+      "SyncedQuoteId": "Quote"
+    },
+    "exclusions": [
+      "ContractId",
+      "CampaignId",
+      "Referido_por__c",
+      "Referido_a__c",
+      "Interlocutor__c"
+    ]
+  },
+  "Contact": {
+    "refs": [],
+    "exclusions": []
+  },
+  "Product2": {
+    "refs": [],
+    "exclusions": []
+  },
+  "Account": {
+    "refs": [],
+    "exclusions": []
+  }
+}
