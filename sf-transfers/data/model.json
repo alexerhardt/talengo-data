@@ -1,5 +1,5 @@
 {
-  "compensation__c": {
+  "Compensation__c": {
     "refs": {
       "Team_Id__c": "Equipo_de_trabajo__c",
       "PNB__Id__c": "Opportunity",
@@ -41,6 +41,7 @@
       "ShipToContactId",
       "BillToContactId",
       "CustomerAuthorizedById",
+      "CompanyAuthorizedById",
       "ContractId"
     ]
   },
@@ -52,7 +53,8 @@
     },
     "exclusions": [
       "ContractId",
-      "ContactId"
+      "ContactId",
+      "nombreQuienFirma__c"
     ]
   },
   "Opportunity": {
@@ -65,13 +67,17 @@
       "CampaignId",
       "Referido_por__c",
       "Referido_a__c",
-      "Interlocutor__c"
+      "Interlocutor__c",
+      "SyncedQuoteId"
     ]
   },
   "Contact": {
     "refs": [],
     "exclusions": [
-      "Curriculum_Vitae__c"
+      "Curriculum_Vitae__c",
+      "OwnerId",
+      "ReportsToId",
+      "IndividualId"
     ]
   },
   "Pricebook2": {
@@ -80,9 +86,31 @@
   },
   "Product2": {
     "refs": [],
-    "exclusions": []
+    "exclusions": [
+      "ExternalDataSourceId"
+    ]
   },
   "Account": {
+    "refs": [],
+    "exclusions": [
+      "Banco__c",
+      "ParentId",
+      "OwnerId"
+    ]
+  },
+  "Group": {
+    "refs": [],
+    "exclusions": []
+  },
+  "User": {
+    "refs": [],
+    "exclusions": []
+  },
+  "RecordType": {
+    "refs": [],
+    "exclusions": []
+  },
+  "BusinessProcess": {
     "refs": [],
     "exclusions": []
   }
