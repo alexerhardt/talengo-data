@@ -1,8 +1,9 @@
 # TODO: Add logging with numbers of calls, etc
 # Add info on id and object being inserted
+from config import PRODUCTION_ID_KEY
 import copy
 
-GLOBAL_EXCLUSIONS = ["User", "Group"]
+GLOBAL_EXCLUSIONS = ["User", "Group", "RecordType"]
 
 
 def update_metadata_map(sf, object_key, metadata_map):
@@ -45,7 +46,8 @@ def upsert_record_and_references(
         for field in fields_metadata["fields"]
         if field["type"] == "reference"
         and field["referenceTo"][0] != "User"
-        or field["referenceTo"][0] != "Group"
+        and field["referenceTo"][0] != "Group"
+        and field["referenceTo"][0] != "RecordType"
     ]
 
     # Before inserting into target, depth-first insert all references
@@ -56,13 +58,12 @@ def upsert_record_and_references(
             source, target, ref_object_key, ref_object_id, object_model_map
         )
 
-    # TODO: Need to replace the references in the record with ref ids
     record_data = {field: record.get(field) for field in fields}
-    record_data["ProductionId__c"] = record["Id"]
+    record_data[PRODUCTION_ID_KEY] = record["Id"]
 
     try:
         target.__getattr__(object_key).upsert(
-            f"ProductionId__c/{object_id}", record_data
+            f"${PRODUCTION_ID_KEY}/{object_id}", record_data
         )
         print(f"Upserted {object_key}: {record.get('Name', '')}")
     except Exception as e:
