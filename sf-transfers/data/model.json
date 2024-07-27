@@ -74,6 +74,10 @@
       "Curriculum_Vitae__c"
     ]
   },
+  "Pricebook2": {
+    "refs": [],
+    "exclusions": []
+  },
   "Product2": {
     "refs": [],
     "exclusions": []
