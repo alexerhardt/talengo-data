@@ -2,7 +2,9 @@ from config import get_sf_sandbox, get_object_model, PRODUCTION_ID_KEY
 
 sf = get_sf_sandbox()
 object_model = get_object_model()
-PROFILE_NAME = "Administrador del sistema"
+# This was ridiculously hard to find
+# https://salesforce.stackexchange.com/questions/159005/listing-of-all-standard-profiles-and-their-metadata-api-names
+PROFILE_NAME = "Admin"
 
 mdapi = sf.mdapi
 
@@ -36,7 +38,7 @@ for object_key in object_model.keys():
     )
 
     try:
-        mdapi.Profile.upsert(permission_set)
-        print(f"Permission set for {field_name} upserted successfully")
+        mdapi.Profile.update(permission_set)
+        print(f"Permission set for {field_name} updated successfully")
     except Exception as e:
         print(f"Error creating permission set for {field_name}: {e}")
