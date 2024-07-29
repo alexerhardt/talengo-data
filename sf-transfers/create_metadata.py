@@ -15,11 +15,12 @@ for object_key in object_model.keys():
         length=18,  # Salesforce record IDs are 18 characters
         inlineHelpText="Original ID from Production environment",
         unique=True,
+        externalId=True,
     )
 
     # Create the custom field in Salesforce
     try:
-        mdapi.CustomField.create(custom_field)
-        print(f"{field_name} created successfully")
+        mdapi.CustomField.upsert(custom_field)
+        print(f"{field_name} upserted successfully")
     except Exception as e:
         print(f"Error creating {field_name}: {e}")
