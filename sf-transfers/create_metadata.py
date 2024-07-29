@@ -2,6 +2,7 @@ from config import get_sf_sandbox, get_object_model, PRODUCTION_ID_KEY
 
 sf = get_sf_sandbox()
 object_model = get_object_model()
+PROFILE_NAME = "Administrador del sistema"
 
 mdapi = sf.mdapi
 
@@ -24,3 +25,18 @@ for object_key in object_model.keys():
         print(f"{field_name} upserted successfully")
     except Exception as e:
         print(f"Error creating {field_name}: {e}")
+
+    permission_set = mdapi.Profile(
+        fullName=PROFILE_NAME,
+        fieldPermissions=[
+            mdapi.ProfileFieldLevelSecurity(
+                field=field_name, readable=True, editable=True
+            )
+        ],
+    )
+
+    try:
+        mdapi.Profile.upsert(permission_set)
+        print(f"Permission set for {field_name} upserted successfully")
+    except Exception as e:
+        print(f"Error creating permission set for {field_name}: {e}")
