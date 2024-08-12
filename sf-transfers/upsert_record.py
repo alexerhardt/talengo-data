@@ -8,7 +8,11 @@ def upsert_record_and_references(
     source, target, object_key, object_id, metadata_map, object_model_map
 ):
     """
-    Recursively upserts a record and its dependencies
+    Upserts a record and its dependencies.
+
+    Dependency insertion is done recursively and depth-first, ie,
+    the dependencies of a record are inserted before the record itself.
+    Returns the Id of the inserted record and the updated metadata map.
 
     :param source: simple_salesforce.Salesforce source instance
     :param target: simple_salesforce.Salesforce target instance
@@ -16,6 +20,7 @@ def upsert_record_and_references(
     :param object_id: str Salesforce Id of the source object to insert
     :param metadata_map: dict
     :param object_model_map: dict
+
     :return: None
     """
     print(f"Upserting {object_key} {object_id}")
@@ -55,13 +60,9 @@ def upsert_record_and_references(
     }
 
     try:
-        # TODO: Improve __getattr__, get the function with a function
-        target.__getattr__(object_key).upsert(
-            f"{PRODUCTION_ID_KEY}/{object_id}", record_data
-        )
-        inserted_id = target.__getattr__(object_key).get_by_custom_id(
-            PRODUCTION_ID_KEY, object_id
-        )["Id"]
+        target_obj = target.__getattr__(object_key)
+        target_obj.upsert(f"{PRODUCTION_ID_KEY}/{object_id}", record_data)
+        inserted_id = target_obj.get_by_custom_id(PRODUCTION_ID_KEY, object_id)["Id"]
         print(f"Upserted {object_key} {object_id} {record.get('Name', '')}")
     except Exception as e:
         print(f"Upsert error {object_key} {object_id} {record.get('Name', '')}: {e}")
@@ -74,6 +75,7 @@ def upsert_record_and_references(
 def update_metadata_map(sf, object_key, metadata_map):
     """
     Updates the metadata map with the metadata for the object_key if not present.
+
     :param sf: Simple Salesforce instance
     :param object_key: Name of the object in Salesforce (ex: "Contact")
     :param metadata_map: The existing metadata map
@@ -89,6 +91,7 @@ def update_metadata_map(sf, object_key, metadata_map):
 def get_fields_with_refs(exclusions, object_fields_metadata) -> list[tuple[str, str]]:
     """
     Returns a list of fields that have references to other objects.
+
     :param exclusions:
     :param object_fields_metadata:
     :return: List of tuples with the field name and the reference object name
@@ -103,6 +106,7 @@ def get_fields_with_refs(exclusions, object_fields_metadata) -> list[tuple[str, 
 def get_object_refs_to_upsert(fields_with_references) -> list[tuple[str, str]]:
     """
     Further filters the fields with references to exclude system objects.
+
     :param fields_with_references:
     :return: List of tuples with the field name and the reference object name
     """
