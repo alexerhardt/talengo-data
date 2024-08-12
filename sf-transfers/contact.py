@@ -1,5 +1,5 @@
 from config import get_sf_prod, get_sf_sandbox, get_object_model
-from copy_entities import migrate
+from migrate import migrate
 
 sf_prod = get_sf_prod()
 sf_sandbox = get_sf_sandbox()
