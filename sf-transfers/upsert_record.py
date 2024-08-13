@@ -5,7 +5,13 @@ GLOBAL_EXCLUSIONS = ["User", "Group", "RecordType"]
 
 
 def upsert_record_and_references(
-    source, target, object_key, object_id, metadata_map, object_model_map
+    source,
+    target,
+    object_key,
+    object_id,
+    metadata_map,
+    object_model_map,
+    upserted_map={},
 ):
     """
     Upserts a record and its dependencies.
@@ -20,14 +26,19 @@ def upsert_record_and_references(
     :param object_id: str Salesforce Id of the source object to insert
     :param metadata_map: dict
     :param object_model_map: dict
+    :param upserted_map: dict
 
     :return: None
     """
+    # All records up the tree should have been upserted already
+    if object_id in upserted_map:
+        return upserted_map[object_id], metadata_map, upserted_map
+
     print(f"Upserting {object_key} {object_id}")
 
     # Updates our metadata definitions if we don't have them
-    updated_metadata_map = update_metadata_map(source, object_key, metadata_map)
-    object_fields_metadata = updated_metadata_map[object_key]["fields"]
+    metadata_map = update_metadata_map(source, object_key, metadata_map)
+    object_fields_metadata = metadata_map[object_key]["fields"]
 
     exclusions = object_model_map[object_key].get("exclusions", [])
     fields_with_refs = get_fields_with_refs(exclusions, object_fields_metadata)
@@ -43,13 +54,14 @@ def upsert_record_and_references(
         ref_key, ref_object_key = ref[0], ref[1]
         ref_object_id = record[ref[0]]
         if ref_object_id:
-            inserted_id, updated_metadata_map = upsert_record_and_references(
+            inserted_id, metadata_map, upserted_map = upsert_record_and_references(
                 source,
                 target,
                 ref_object_key,
                 ref_object_id,
-                updated_metadata_map,
+                metadata_map,
                 object_model_map,
+                upserted_map,
             )
             parent_refs[ref_key] = inserted_id
 
@@ -60,16 +72,62 @@ def upsert_record_and_references(
     }
 
     try:
-        target_obj = target.__getattr__(object_key)
-        target_obj.upsert(f"{PRODUCTION_ID_KEY}/{object_id}", record_data)
-        inserted_id = target_obj.get_by_custom_id(PRODUCTION_ID_KEY, object_id)["Id"]
-        print(f"Upserted {object_key} {object_id} {record.get('Name', '')}")
+        sf_target_obj = target.__getattr__(object_key)
+        if object_key == "Order":
+            inserted_id = upsert_order(sf_target_obj, object_id, record_data)
+        else:
+            inserted_id = upsert_record(sf_target_obj, object_id, record_data)
     except Exception as e:
-        print(f"Upsert error {object_key} {object_id} {record.get('Name', '')}: {e}")
-        inserted_id = None
+        raise Exception(f"Upsert error {object_key} {object_id}: {e}")
+
+    upserted_map[object_id] = inserted_id
+    print(f"Upserted {object_key} {object_id} {record.get('Name', '')}")
 
     # We return the fields metadata to avoid having to re-query it
-    return inserted_id, updated_metadata_map
+    return inserted_id, metadata_map, upserted_map
+
+
+def upsert_record(sf_target_obj, object_id, record_data) -> str:
+    """
+    Upserts a record in the target Salesforce instance.
+
+    If upsert fails but the object exists, we return the
+
+    :param sf_target_obj: Simple Salesforce object instance
+    :param object_id: str Salesforce Id of the object to insert
+    :param record_data: dict Data to insert
+    :return:
+    """
+    try:
+        sf_target_obj.upsert(f"{PRODUCTION_ID_KEY}/{object_id}", record_data)
+    except Exception as e:
+        # Sometimes certain field objects cannot updated once created
+        # ex: https://salesforce.stackexchange.com/q/70682
+        # Retry without the fields that caused the error
+        print(f"Warning: upsert error {object_id}: {e}. Retrying...")
+        if e.content and "fields" in e.content and len(e.content["fields"]) > 0:
+            fields = e.content["fields"]
+            new_data = {k: v for k, v in record_data.items() if k not in fields}
+            sf_target_obj.upsert(f"{PRODUCTION_ID_KEY}/{object_id}", new_data)
+    target_id = sf_target_obj.get_by_custom_id(PRODUCTION_ID_KEY, object_id)["Id"]
+    return target_id
+
+
+def upsert_order(sf_target_obj, object_id, record_data) -> str:
+    """
+    Upserts a record in the target Salesforce instance.
+
+    :param sf_target_obj: Simple Salesforce object instance
+    :param object_id: str Salesforce Id of the object to insert
+    :param record_data: dict Data to insert
+    :return:
+    """
+    # TODO: Add OrderLineItems
+    order_status = record_data.get("Status")
+    record_data["Status"] = "Abierta"
+    inserted_id = upsert_record(sf_target_obj, object_id, record_data)
+    sf_target_obj.upsert(inserted_id, {"Status": order_status})
+    return inserted_id
 
 
 def update_metadata_map(sf, object_key, metadata_map):
