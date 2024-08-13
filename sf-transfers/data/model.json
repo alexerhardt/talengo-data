@@ -54,7 +54,8 @@
     "exclusions": [
       "ContractId",
       "ContactId",
-      "nombreQuienFirma__c"
+      "nombreQuienFirma__c",
+      "CanCreateQuoteLineItems"
     ]
   },
   "Opportunity": {
@@ -67,7 +68,6 @@
       "CampaignId",
       "Referido_por__c",
       "Referido_a__c",
-      "Interlocutor__c",
       "SyncedQuoteId"
     ]
   },
@@ -77,7 +77,8 @@
       "Curriculum_Vitae__c",
       "OwnerId",
       "ReportsToId",
-      "IndividualId"
+      "IndividualId",
+      "MasterRecordId"
     ]
   },
   "Pricebook2": {
@@ -97,21 +98,5 @@
       "ParentId",
       "OwnerId"
     ]
-  },
-  "Group": {
-    "refs": [],
-    "exclusions": []
-  },
-  "User": {
-    "refs": [],
-    "exclusions": []
-  },
-  "RecordType": {
-    "refs": [],
-    "exclusions": []
-  },
-  "BusinessProcess": {
-    "refs": [],
-    "exclusions": []
   }
 }

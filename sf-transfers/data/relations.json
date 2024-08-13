@@ -1,0 +1,185 @@
+{
+  "compensation__c": {
+    "OwnerId": [
+      "Group",
+      "User"
+    ],
+    "PNB_Id__c": [
+      "Opportunity"
+    ],
+    "Team_Id__c": [
+      "Equipo_de_trabajo__c"
+    ],
+    "Id_Referencia__c": [
+      "Order"
+    ]
+  },
+  "Equipo_de_trabajo__c": {
+    "Referencia__c": [
+      "Order"
+    ],
+    "Contacto__c": [
+      "Contact"
+    ],
+    "Proceso__c": [
+      "Asset"
+    ],
+    "Usuario__c": [
+      "User"
+    ]
+  },
+  "Asset": {
+    "ContactId": [
+      "Contact"
+    ],
+    "AccountId": [
+      "Account"
+    ],
+    "ParentId": [
+      "Asset"
+    ],
+    "Product2Id": [
+      "Product2"
+    ],
+    "OwnerId": [
+      "User"
+    ],
+    "RecordTypeId": [
+      "RecordType"
+    ],
+    "Order__c": [
+      "Order"
+    ],
+    "Receptor_de_Progress__c": [
+      "Contact"
+    ]
+  },
+  "Order": {
+    "OwnerId": [
+      "Group",
+      "User"
+    ],
+    "ContractId": [
+      "Contract"
+    ],
+    "AccountId": [
+      "Account"
+    ],
+    "Pricebook2Id": [
+      "Pricebook2"
+    ],
+    "OriginalOrderId": [
+      "Order"
+    ],
+    "OpportunityId": [
+      "Opportunity"
+    ],
+    "QuoteId": [
+      "Quote"
+    ],
+    "RecordTypeId": [
+      "RecordType"
+    ],
+    "CustomerAuthorizedById": [
+      "Contact"
+    ],
+    "CompanyAuthorizedById": [
+      "User"
+    ],
+    "BillToContactId": [
+      "Contact"
+    ],
+    "ShipToContactId": [
+      "Contact"
+    ]
+  },
+  "Quote": {
+    "OwnerId": [
+      "Group",
+      "User"
+    ],
+    "RecordTypeId": [
+      "RecordType"
+    ],
+    "OpportunityId": [
+      "Opportunity"
+    ],
+    "Pricebook2Id": [
+      "Pricebook2"
+    ],
+    "ContactId": [
+      "Contact"
+    ],
+    "nombreQuienFirma__c": [
+      "User"
+    ],
+    "Referencia__c": [
+      "Order"
+    ]
+  },
+  "Opportunity": {
+    "AccountId": [
+      "Account"
+    ],
+    "CampaignId": [
+      "Campaign"
+    ],
+    "Pricebook2Id": [
+      "Pricebook2"
+    ],
+    "OwnerId": [
+      "User"
+    ],
+    "ContactId": [
+      "Contact"
+    ],
+    "SyncedQuoteId": [
+      "Quote"
+    ],
+    "Interlocutor__c": [
+      "Contact"
+    ],
+    "Referido_por__c": [
+      "Account"
+    ],
+    "Referido_a__c": [
+      "Account"
+    ]
+  },
+  "Contact": {
+    "AccountId": [
+      "Account"
+    ],
+    "RecordTypeId": [
+      "RecordType"
+    ],
+    "ReportsToId": [
+      "Contact"
+    ],
+    "OwnerId": [
+      "User"
+    ],
+    "IndividualId": [
+      "Individual"
+    ],
+    "Curriculum_Vitae__c": [
+      "Curriculum_Vitae__c"
+    ]
+  },
+  "Product2": {
+    "ExternalDataSourceId": [
+      "ExternalDataSource"
+    ]
+  },
+  "Account": {
+    "ParentId": [
+      "Account"
+    ],
+    "OwnerId": [
+      "User"
+    ],
+    "Banco__c": [
+      "Banco__c"
+    ]
+  }
+}
