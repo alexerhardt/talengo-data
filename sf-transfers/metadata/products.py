@@ -2,24 +2,35 @@
 Copies the production id into the sandbox instance.
 """
 
-from config import get_sf_sandbox, get_sf_prod
+import logging
 
-sf_production = get_sf_prod()
-sf_sandbox = get_sf_sandbox()
+from config import get_sf_sandbox, get_sf_prod, PRODUCTION_ID_KEY
 
-query = "SELECT Id, Name FROM Product2 WHERE IsActive = True"
-products_production = sf_production.query_all(query)["records"]
+logger = logging.getLogger(__name__)
 
-for product in products_production:
-    product_id = product["Id"]
-    product_name = product["Name"]
 
-    sandbox_product = sf_sandbox.query(
-        f"SELECT Id FROM Product2 WHERE Name='{product_name}'"
-    )
+def copy_product_production_id(
+    sf_prod, sf_sandbox, production_id_key=PRODUCTION_ID_KEY
+):
+    query = "SELECT Id, Name FROM Product2 WHERE IsActive = True"
+    products_production = sf_prod.query_all(query)["records"]
 
-    print(f"Updating {product_name} with production id {product_id}")
+    for product in products_production:
+        product_id = product["Id"]
+        product_name = product["Name"]
 
-    sf_sandbox.Product2.update(
-        sandbox_product["records"][0]["Id"], {"ProductionId__c": product_id}
-    )
+        sandbox_product = sf_sandbox.query(
+            f"SELECT Id FROM Product2 WHERE Name='{product_name}'"
+        )
+
+        logger.info(f"Updating {product_name} with production id {product_id}")
+
+        sf_sandbox.Product2.update(
+            sandbox_product["records"][0]["Id"], {production_id_key: product_id}
+        )
+
+
+if __name__ == "__main__":
+    sf_prod = get_sf_prod()
+    sf_sandbox = get_sf_sandbox()
+    copy_product_production_id(sf_prod, sf_sandbox)

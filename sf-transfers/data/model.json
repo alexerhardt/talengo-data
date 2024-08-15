@@ -85,6 +85,16 @@
     "refs": [],
     "exclusions": []
   },
+  "PricebookEntry": {
+    "refs": [],
+    "exclusions": []
+  },
+  "OrderItem": {
+    "refs": [],
+    "exclusions": [
+      "QuoteLineItemId"
+    ]
+  },
   "Product2": {
     "refs": [],
     "exclusions": [
