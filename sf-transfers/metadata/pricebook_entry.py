@@ -25,7 +25,6 @@ def copy_pricebook_entry_production_id(
     prod_query = """
         SELECT Id, Pricebook2Id, Product2Id, Pricebook2.Name, Product2.Name, CurrencyIsoCode, UnitPrice
         FROM PricebookEntry 
-        WHERE IsActive = true
     """
     prod_results = sf_prod.query_all(prod_query)
 
@@ -39,7 +38,6 @@ def copy_pricebook_entry_production_id(
             AND Product2.Name = '{record["Product2"]["Name"]}'
             AND CurrencyIsoCode = '{record["CurrencyIsoCode"]}'
             AND UnitPrice = {record["UnitPrice"]}
-            AND IsActive = true
         """
         sandbox_results = sf_sandbox.query(sandbox_query)
         sandbox_id = sandbox_results["records"][0]["Id"]
