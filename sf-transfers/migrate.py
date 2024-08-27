@@ -24,6 +24,8 @@ def migrate(sf_source, sf_target, object_key, object_model, query=None):
             record["Id"],
             {},
             object_model,
+            {},
+            True,
         )
 
 
