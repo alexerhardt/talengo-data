@@ -1,9 +1,9 @@
+import os
+import copy
+
 from simple_salesforce import SalesforceResourceNotFound
 
 from config import PRODUCTION_ID_KEY, get_object_model
-import copy
-
-GLOBAL_EXCLUSIONS = ["User", "Group", "RecordType"]
 
 
 def upsert_record_and_references(
@@ -38,6 +38,8 @@ def upsert_record_and_references(
     if object_id in upserted_map:
         return upserted_map[object_id], metadata_map, upserted_map
 
+    # Whereas upserted map allows us to skip in the same run (in-memory)
+    # The user can also manually prevent updating existing records in the target
     if skip_existing:
         existing_id = get_id_in_target(target, object_key, object_id)
         if existing_id:
@@ -51,15 +53,20 @@ def upsert_record_and_references(
     metadata_map = update_metadata_map(source, object_key, metadata_map)
     object_fields_metadata = metadata_map[object_key]["fields"]
 
+    # Get all fields to query from the source
     exclusions = object_model_map[object_key].get("exclusions", [])
-    fields_with_refs = get_fields_with_refs(exclusions, object_fields_metadata)
+    fields_and_refs = get_fields_and_refs(exclusions, object_fields_metadata)
 
-    fields = [field[0] for field in fields_with_refs]
+    # Fetch the record data from source
+    fields = [field[0] for field in fields_and_refs]
     query = f"SELECT {', '.join(fields)} FROM {object_key} WHERE Id = '{object_id}'"
     record = source.query(query)["records"][0]
 
     # Before inserting into target, depth-first insert all references
-    refs = get_object_refs_to_upsert(fields_with_refs)
+    # We do some further filtering to exclude system references that we don't want
+    # This is because we don't want to depth-insert User, Group, or RecordType objects,
+    # but we do want their ids.
+    refs = get_object_refs_to_upsert(fields_and_refs)
     parent_refs = {}
 
     for ref in refs:
@@ -85,6 +92,7 @@ def upsert_record_and_references(
         for field in fields
     }
 
+    # TODO: Abstract into function
     try:
         sf_target_obj = target.__getattr__(object_key)
         if object_key == "Order":
@@ -126,9 +134,8 @@ def get_id_in_target(sf_obj, object_key, source_id):
 def upsert_record(sf_target_obj, object_id, record_data) -> str:
     """
     Upserts a record in the target Salesforce instance.
-
-    If upsert fails but the object exists, we return the
-
+    Retries on specific errors.
+    TODO: Refactor the error handling, it's ugly as sin
     :param sf_target_obj: Simple Salesforce object instance
     :param object_id: str Salesforce Id of the object to insert
     :param record_data: dict Data to insert
@@ -140,7 +147,6 @@ def upsert_record(sf_target_obj, object_id, record_data) -> str:
         # Sometimes certain field objects cannot updated once created
         # ex: https://salesforce.stackexchange.com/q/70682
         # Retry without the fields that caused the error
-        # TODO: Refactor
         if (
             e.content
             and "errorCode" in e.content[0]
@@ -149,8 +155,9 @@ def upsert_record(sf_target_obj, object_id, record_data) -> str:
             print(f"Warning: upsert error {object_id}: {e}. Retrying...")
             fields = e.content[0]["fields"]
             new_data = {k: v for k, v in record_data.items() if k not in fields}
-            # sf_target_obj.upsert(f"{PRODUCTION_ID_KEY}/{object_id}", new_data)
             return upsert_record(sf_target_obj, object_id, new_data)
+        # These errors happen when migrating inactive user references of key objects
+        # We replace the reference with the default user and retry
         elif (
             e.content
             and "errorCode" in e.content[0]
@@ -158,9 +165,7 @@ def upsert_record(sf_target_obj, object_id, record_data) -> str:
         ):
             print(f"Warning: upsert error {object_id}: {e}. Inactive user. Retrying...")
             new_data = copy.deepcopy(record_data)
-            # TODO: Move out to .env
-            new_data["OwnerId"] = "0058e000002FWPA"  # Foster
-            # sf_target_obj.upsert(f"{PRODUCTION_ID_KEY}/{object_id}", new_data)
+            new_data["OwnerId"] = os.getenv("DEFAULT_SF_USER_ID")
             return upsert_record(sf_target_obj, object_id, new_data)
         else:
             raise e
@@ -220,17 +225,11 @@ def upsert_order_items(sf_source, sf_target, order_src_id, upserted_map):
 def upsert_pricebook_entry(sf_target_obj, object_id, record_data):
     """
     Upserts a PricebookEntry in the target Salesforce instance.
-
     :param sf_target: simple_salesforce.Salesforce PricebookEntry instance
     :param object_id: str Salesforce Id of the object to insert
     :param record_data: dict Data to insert
     :return:
     """
-    # try:
-    #     sf_target_obj.upsert(f"{PRODUCTION_ID_KEY}/{object_id}", record_data)
-    # except Exception as e:
-    #     raise Exception(f"Upsert error PricebookEntry {object_id}: {e}")
-
     target_id = sf_target_obj.get_by_custom_id(PRODUCTION_ID_KEY, object_id)["Id"]
     return target_id
 
@@ -238,7 +237,6 @@ def upsert_pricebook_entry(sf_target_obj, object_id, record_data):
 def update_metadata_map(sf, object_key, metadata_map):
     """
     Updates the metadata map with the metadata for the object_key if not present.
-
     :param sf: Simple Salesforce instance
     :param object_key: Name of the object in Salesforce (ex: "Contact")
     :param metadata_map: The existing metadata map
@@ -251,10 +249,10 @@ def update_metadata_map(sf, object_key, metadata_map):
     return metadata_map
 
 
-def get_fields_with_refs(exclusions, object_fields_metadata) -> list[tuple[str, str]]:
+def get_fields_and_refs(exclusions, object_fields_metadata) -> list[tuple[str, str]]:
     """
-    Returns a list of fields that have references to other objects.
-
+    Returns a full list of field keys and their referenced objects, if any.
+    Exclude fields that are not creatable, plus any explicitly indicated in exclusions.
     :param exclusions:
     :param object_fields_metadata:
     :return: List of tuples with the field name and the reference object name
@@ -269,7 +267,6 @@ def get_fields_with_refs(exclusions, object_fields_metadata) -> list[tuple[str, 
 def get_object_refs_to_upsert(fields_with_references) -> list[tuple[str, str]]:
     """
     Further filters the fields with references to exclude system objects.
-
     :param fields_with_references:
     :return: List of tuples with the field name and the reference object name
     """
