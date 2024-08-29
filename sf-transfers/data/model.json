@@ -58,6 +58,10 @@
       "CanCreateQuoteLineItems"
     ]
   },
+  "OpportunityTeamMember": {
+    "refs": {},
+    "exclusions": []
+  },
   "Opportunity": {
     "refs": {
       "AccountId": "Account",
@@ -106,7 +110,9 @@
     "exclusions": [
       "Banco__c",
       "ParentId",
-      "OwnerId"
+      "OwnerId",
+      "Cuenta_activa_BDR__c",
+      "Estado_Cuentas_BDR__c"
     ]
   }
 }
