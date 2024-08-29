@@ -1,0 +1,2 @@
+- Crear Cargo__c en Contacto
+- Usar create_user_contacts
