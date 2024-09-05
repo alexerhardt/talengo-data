@@ -14,6 +14,8 @@ jupyter = "^1.0.0"
 python-dotenv = "^1.0.1"
 sqlalchemy = "^2.0.31"
 simple-salesforce = "^1.12.6"
+azure-storage-blob = "^12.22.0"
+tenacity = "^9.0.0"
 
 
 [build-system]
