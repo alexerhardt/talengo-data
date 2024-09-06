@@ -1,5 +1,4 @@
 import argparse
-import base64
 import logging
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -28,54 +27,62 @@ MAX_WORKERS = 10
 MAX_RETRIES = 5
 WAIT_MULTIPLIER = 1
 DEFAULT_LIMIT = None
+ATTACHMENT_TYPE = "Attachment"
+DOCUMENT_TYPE = "ContentDocument"
 
 
-def main(limit=DEFAULT_LIMIT):
-    processed_ids = get_processed_ids()
-    attachments = get_attachments_from_salesforce()
-    logger.info(f"Retrieved {len(attachments)} attachments from Salesforce")
-    attachments_to_process = [
-        att for att in attachments if att["Id"] not in processed_ids
-    ][:limit]
+def main(record_type=ATTACHMENT_TYPE, limit=DEFAULT_LIMIT):
+    logger.info(f"Copying {record_type}s from Salesforce to Azure")
 
-    logger.info(f"Processing {len(attachments_to_process)} attachments")
+    if record_type == "documents":
+        records = get_content_document_versions_from_salesforce()
+        process_func = process_document
+    else:
+        records = get_attachments_from_salesforce()
+        process_func = process_attachment
+    logger.info(f"Retrieved {len(records)} {record_type}s from Salesforce")
+
+    processed_ids = get_processed_ids_from_azure()
+    records_to_process = filter_processed_records(records, processed_ids, limit)
+    logger.info(f"Processing {len(records_to_process)} {record_type}s")
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {
-            executor.submit(process_attachment, att): att
-            for att in attachments_to_process
+            executor.submit(process_func, rec): rec for rec in records_to_process
         }
         for future in as_completed(futures):
             record = futures[future]
             try:
                 future.result()
-            except RetryError as e:
-                # Log the original exception that caused RetryError
+            except RetryError as e:  # Log the original exception that caused RetryError
                 logger.error(
-                    f"Error processing record {record['Id']}: "
+                    f"Error processing {record_type} record {record['Id']}: "
                     f"{str(e.last_attempt.exception())}"
                 )
             except Exception as e:
                 logger.error(f"Error processing record {record['Id']}: {str(e)}")
 
 
-def get_processed_ids():
+def get_processed_ids_from_azure():
     blob_names = set()
 
     blob_list = blob_container_client.list_blobs()
-    logger.info(f"Retrieved blob list in the container")
     for blob in blob_list:
         blob_names.add(blob.name)
 
     return blob_names
 
 
+def filter_processed_records(records, processed_ids, limit):
+    return [record for record in records if record["Id"] not in processed_ids][:limit]
+
+
 def get_content_document_versions_from_salesforce():
-    records = get_all_parent_records()
+    records = get_all_document_parent_records()
     return get_document_versions_from_records(records)
 
 
-def get_all_parent_records():
+def get_all_document_parent_records():
     result = []
     s_objects = ["Curriculum_Vitae__c", "Contact", "Asset", "Entrevista_inicial__c"]
     for s_object in s_objects:
@@ -85,7 +92,6 @@ def get_all_parent_records():
 
 
 def get_document_versions_from_records(records):
-    # Copy the ids into a new list as we are going to mutate it
     result = []
     ids = [record["Id"] for record in records]
     while len(ids) > 0:
@@ -141,7 +147,8 @@ def process_attachment(record):
     parent_id = record["ParentId"]
     parent_type = record["Parent"]["Type"]
 
-    body = fetch_attachment_body(body_url)
+    full_url = urljoin(sf.base_url, body_url)
+    body = fetch_file_body_from_salesforce(full_url)
 
     metadata = {
         "type": "Attachment",
@@ -157,13 +164,19 @@ def process_attachment(record):
     return record_id
 
 
+def process_document(record):
+    print(record)
+    pass
+
+
 @retry(
     stop=stop_after_attempt(MAX_RETRIES),
     wait=wait_exponential(multiplier=WAIT_MULTIPLIER),
 )
-def fetch_attachment_body(body_url):
-    """Fetch the attachment body (binary data) from the Body URL."""
-    full_url = urljoin(sf.base_url, body_url)
+def fetch_file_body_from_salesforce(full_url):
+    """
+    Fetch the file body (binary data) from the URL.
+    """
     headers = {
         "Authorization": f"Bearer {sf.session_id}",
     }
@@ -173,7 +186,7 @@ def fetch_attachment_body(body_url):
         return response.content  # This is the binary content of the file
     else:
         raise Exception(
-            f"Failed to fetch body for Attachment {body_url}; "
+            f"Failed to fetch body for Attachment {full_url}; "
             f"Status Code: {response.status_code}, "
             f"Response Text: {response.text}"
         )
@@ -199,8 +212,11 @@ if __name__ == "__main__":
         default=DEFAULT_LIMIT,
         help=f"Limit the number of files to process (default: {DEFAULT_LIMIT})",
     )
+    parser.add_argument(
+        "--type",
+        type=str,
+        default=ATTACHMENT_TYPE,
+        help="Type of records to process (attachments or documents)",
+    )
     args = parser.parse_args()
-
-    logger.info("About to start the party")
-
-    main()
+    main(args.type, args.limit)
