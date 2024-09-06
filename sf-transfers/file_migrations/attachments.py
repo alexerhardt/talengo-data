@@ -70,6 +70,45 @@ def get_processed_ids():
     return blob_names
 
 
+def get_content_document_versions_from_salesforce():
+    records = get_all_parent_records()
+    return get_document_versions_from_records(records)
+
+
+def get_all_parent_records():
+    result = []
+    s_objects = ["Curriculum_Vitae__c", "Contact", "Asset", "Entrevista_inicial__c"]
+    for s_object in s_objects:
+        query = f"SELECT Id FROM {s_object}"
+        result.extend(sf.query_all(query)["records"])
+    return result
+
+
+def get_document_versions_from_records(records):
+    # Copy the ids into a new list as we are going to mutate it
+    result = []
+    ids = [record["Id"] for record in records]
+    while len(ids) > 0:
+        ids_string = f"'{ids.pop()}',"  # Start the where clause
+        while len(ids) > 0 and len(ids_string) < 4000 - 18:
+            ids_string += f",'{ids.pop()}'"
+        query = create_content_document_link_query(ids_string)
+        query_result = sf.query_all(query)
+        result.extend(query_result["records"])
+    return result
+
+
+def create_content_document_link_query(ids_string):
+    return f"""
+        SELECT ContentDocument.LatestPublishedVersion.VersionDataUrl,
+               ContentDocument.LatestPublishedVersion.FileExtension,
+               ContentDocument.LatestPublishedVersion.Id
+        FROM ContentDocumentLink
+        WHERE LinkedEntityId IN ({ids_string})
+        ORDER BY ContentDocumentId
+    """
+
+
 def get_attachments_from_salesforce():
     logger.info("Fetching attachments from Salesforce")
 
