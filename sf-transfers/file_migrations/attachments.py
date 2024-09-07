@@ -34,21 +34,24 @@ DOCUMENT_TYPE = "ContentDocument"
 def main(record_type=ATTACHMENT_TYPE, limit=DEFAULT_LIMIT):
     logger.info(f"Copying {record_type}s from Salesforce to Azure")
 
-    if record_type == "documents":
+    if record_type == DOCUMENT_TYPE:
         records = get_content_document_versions_from_salesforce()
-        process_func = process_document
-    else:
+    elif record_type == ATTACHMENT_TYPE:
         records = get_attachments_from_salesforce()
-        process_func = process_attachment
+    else:
+        raise ValueError(f"Invalid record type: {record_type}")
+
     logger.info(f"Retrieved {len(records)} {record_type}s from Salesforce")
 
     processed_ids = get_processed_ids_from_azure()
     records_to_process = filter_processed_records(records, processed_ids, limit)
+
     logger.info(f"Processing {len(records_to_process)} {record_type}s")
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {
-            executor.submit(process_func, rec): rec for rec in records_to_process
+            executor.submit(process_record, rec, record_type): rec
+            for rec in records_to_process
         }
         for future in as_completed(futures):
             record = futures[future]
@@ -78,8 +81,10 @@ def filter_processed_records(records, processed_ids, limit):
 
 
 def get_content_document_versions_from_salesforce():
-    records = get_all_document_parent_records()
-    return get_document_versions_from_records(records)
+    parent_records = get_all_document_parent_records()
+    raw_records = get_document_versions_from_records(parent_records)
+    flattened_records = standardize_document_version_records(raw_records)
+    return flattened_records
 
 
 def get_all_document_parent_records():
@@ -95,7 +100,7 @@ def get_document_versions_from_records(records):
     result = []
     ids = [record["Id"] for record in records]
     while len(ids) > 0:
-        ids_string = f"'{ids.pop()}',"  # Start the where clause
+        ids_string = f"'{ids.pop()}'"  # Start the where clause
         while len(ids) > 0 and len(ids_string) < 4000 - 18:
             ids_string += f",'{ids.pop()}'"
         query = create_content_document_link_query(ids_string)
@@ -106,13 +111,36 @@ def get_document_versions_from_records(records):
 
 def create_content_document_link_query(ids_string):
     return f"""
-        SELECT ContentDocument.LatestPublishedVersion.VersionDataUrl,
-               ContentDocument.LatestPublishedVersion.FileExtension,
-               ContentDocument.LatestPublishedVersion.Id
+        SELECT ContentDocument.LatestPublishedVersion.Id,
+               ContentDocument.LatestPublishedVersion.VersionDataUrl,  
+               ContentDocument.LatestPublishedVersion.PathOnClient,
+               LinkedEntityId,
+               LinkedEntity.Type
         FROM ContentDocumentLink
         WHERE LinkedEntityId IN ({ids_string})
         ORDER BY ContentDocumentId
     """
+
+
+def standardize_document_version_records(records):
+    """
+    Makes document version records have the same shape as an Attachment record.
+    :param records:
+    :return:
+    """
+    result = []
+    for record in records:
+        latest_content_doc_version = record["ContentDocument"]["LatestPublishedVersion"]
+        result.append(
+            {
+                "Id": latest_content_doc_version["Id"],
+                "Body": latest_content_doc_version["VersionDataUrl"],
+                "Name": latest_content_doc_version["PathOnClient"],
+                "ParentId": record["LinkedEntityId"],
+                "Parent": {"Type": record["LinkedEntity"]["Type"]},
+            }
+        )
+    return result
 
 
 def get_attachments_from_salesforce():
@@ -140,20 +168,23 @@ def get_attachments_from_salesforce():
     return all_records
 
 
-def process_attachment(record):
+def process_record(record, record_type):
     record_id = record["Id"]
     body_url = record["Body"]
     file_name = record["Name"]
     parent_id = record["ParentId"]
     parent_type = record["Parent"]["Type"]
 
-    full_url = urljoin(sf.base_url, body_url)
+    if record_type == ATTACHMENT_TYPE:
+        full_url = urljoin(sf.base_url, body_url)
+    else:
+        full_url = body_url
+
     body = fetch_file_body_from_salesforce(full_url)
 
     metadata = {
-        "type": "Attachment",
+        "type": record_type,
         "id": record_id,
-        "bodyUrl": body_url,
         "asciiFileName": quote(file_name),  # Azure doesn't like special characters
         "parentId": parent_id,
         "parentType": parent_type,
@@ -162,11 +193,6 @@ def process_attachment(record):
     save_file_to_azure(record_id, body, metadata)
 
     return record_id
-
-
-def process_document(record):
-    print(record)
-    pass
 
 
 @retry(
@@ -196,9 +222,11 @@ def fetch_file_body_from_salesforce(full_url):
     stop=stop_after_attempt(MAX_RETRIES),
     wait=wait_exponential(multiplier=WAIT_MULTIPLIER),
 )
-def save_file_to_azure(blob_name, content, metadata):
+def save_file_to_azure(blob_name, content, metadata, tags=None):
     blob_client = blob_container_client.get_blob_client(blob_name)
     blob_client.upload_blob(content, metadata=metadata)
+    if tags:
+        blob_client.set_tags(tags)
     logger.info(f"File {blob_name} uploaded to Azure with metadata {metadata}")
 
 
