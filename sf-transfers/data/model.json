@@ -105,6 +105,10 @@
       "ExternalDataSourceId"
     ]
   },
+  "Facturas__c": {
+    "refs": [],
+    "exclusions": []
+  },
   "Account": {
     "refs": [],
     "exclusions": [
