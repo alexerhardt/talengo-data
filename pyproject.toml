@@ -16,6 +16,7 @@ sqlalchemy = "^2.0.31"
 simple-salesforce = "^1.12.6"
 azure-storage-blob = "^12.22.0"
 tenacity = "^9.0.0"
+itables = "^2.1.5"
 
 
 [build-system]

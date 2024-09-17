@@ -990,6 +990,29 @@ files = [
 arrow = ">=0.15.0"
 
 [[package]]
+name = "itables"
+version = "2.1.5"
+description = "Pandas and Polar DataFrames as interactive DataTables"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "itables-2.1.5-py3-none-any.whl", hash = "sha256:842e7e31f3f6ea5e4a085d189dcb6ee38e20c0750e4322a31eccb895e5a00a76"},
+    {file = "itables-2.1.5.tar.gz", hash = "sha256:ed96c98cdd91a91c004c1a0150d572a6b1021a1311bc94e8bfa2e68ba42d44fb"},
+]
+
+[package.dependencies]
+ipython = "*"
+numpy = "*"
+pandas = "*"
+
+[package.extras]
+all = ["matplotlib", "polars", "pyarrow", "pytz", "world-bank-data"]
+polars = ["polars", "pyarrow"]
+samples = ["pytz", "world-bank-data"]
+style = ["matplotlib"]
+test = ["ipykernel", "jupytext", "matplotlib", "nbconvert", "polars", "pyarrow", "pytest", "pytest-cov", "pytz", "requests", "shiny", "world-bank-data"]
+
+[[package]]
 name = "jedi"
 version = "0.19.1"
 description = "An autocompletion tool for Python that can be used for text editors."
@@ -3339,4 +3362,4 @@ xmlsec = ["xmlsec (>=0.6.1)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "0d4f5963f83272d4b9d680f618594d199a960920485d2ada7320221b3ee8ccb2"
+content-hash = "0f2c7769e5c847662e50670d33c105b7cc670abd0c3044ac95d23a5c84972f62"
