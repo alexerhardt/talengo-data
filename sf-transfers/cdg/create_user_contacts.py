@@ -3,14 +3,20 @@ from config import get_sf_sandbox
 
 def create_user_contacts(sf):
     users = sf.query(
-        "SELECT Id, Email, FirstName, LastName, Cargo__c FROM User WHERE Cargo__c != NULL"
+        """
+        SELECT Id, Email, FirstName, LastName, Cargo__c 
+        FROM User WHERE IsActive = true AND UserType = 'Standard'
+        """
     )
 
     for user in users["records"]:
+        print(
+            f"Processing User: {user['Id']}, {user['Email']} {user['FirstName']} {user['LastName']}"
+        )
         email = user["Email"].replace(".invalid", "")
         first_name = user["FirstName"]
         last_name = user["LastName"]
-        cargo = user["Cargo__c"]
+        cargo = user["Cargo__c"] if user["Cargo__c"] else None
 
         contact_query = f"SELECT Id, CargoCdG__c FROM Contact WHERE Email = '{email}'"
         contact_result = sf.query(contact_query)
