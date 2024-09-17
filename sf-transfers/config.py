@@ -37,3 +37,18 @@ def get_object_model():
     path = os.path.join(os.path.dirname(__file__), "data/model.json")
     with open(path) as f:
         return json.load(f)
+
+
+def get_db_engine():
+    from sqlalchemy import create_engine
+
+    DB_HOST = os.getenv("DB_HOST")
+    DB_PORT = os.getenv("DB_PORT")
+    DB_NAME = os.getenv("DB_NAME")
+    DB_USER = os.getenv("DB_USER")
+    DB_PASSWORD = os.getenv("DB_PASSWORD")
+    connection_string = (
+        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    )
+
+    return create_engine(connection_string)
