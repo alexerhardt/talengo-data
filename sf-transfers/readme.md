@@ -50,6 +50,7 @@ data and enforce validation, but you don't need any of that in a migration.
 - Disable reglas de flujo de trabajo?
 - Disable flujo Equipo de Trabajo
 - Disable Equipo Proceso (not sure if necessary)
+- Re-enable old currencies
 
 
 
@@ -57,6 +58,4 @@ data and enforce validation, but you don't need any of that in a migration.
 
 - Add testing with pytest (challenge: lots of mocking)
 - upsert_record.py has plenty of smells
-- migrate.py could take a SOQL query instead of getting all the records for an Object
-  (this is why we have employee.py, which could be eliminated if this feature existed)
 - Better logging throughout

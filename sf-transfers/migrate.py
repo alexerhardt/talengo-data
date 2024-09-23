@@ -4,7 +4,7 @@ from config import get_sf_prod, get_sf_sandbox, get_object_model
 from upsert_record import upsert_record_and_references
 
 
-def migrate(sf_source, sf_target, object_key, object_model, query=None):
+def migrate(sf_source, sf_target, object_key, object_model, query=None, skip=True):
     """
     Copies all records from the source to the target Salesforce instance.
 
@@ -33,7 +33,7 @@ def migrate(sf_source, sf_target, object_key, object_model, query=None):
             {},
             object_model,
             {},
-            True,
+            skip,
         )
         i += 1
 

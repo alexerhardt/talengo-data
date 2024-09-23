@@ -7,4 +7,4 @@ object_model = get_object_model()
 
 query = "SELECT Id FROM Facturas__c WHERE Anno_Factura_Reporte__c = 2024"
 
-migrate(sf_prod, sf_sandbox, "Facturas__c", object_model, query)
+migrate(sf_prod, sf_sandbox, "Facturas__c", object_model, query, False)

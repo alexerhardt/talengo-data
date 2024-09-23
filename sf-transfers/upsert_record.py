@@ -15,6 +15,7 @@ def upsert_record_and_references(
     object_model_map,
     upserted_map={},
     skip_existing=False,
+    recurse=True,
 ):
     """
     Upserts a record and its dependencies.
@@ -81,7 +82,7 @@ def upsert_record_and_references(
                 metadata_map,
                 object_model_map,
                 upserted_map,
-                skip_existing,
+                skip_existing=True if recurse and not skip_existing else False,
             )
             parent_refs[ref_key] = inserted_id
 
