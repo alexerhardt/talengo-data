@@ -30,6 +30,35 @@ class EzekiaAPIClient(BaseAPIClient):
             self._projects = ProjectsAPI(self)
         return self._projects
 
+    def _get_count(self, entity: str) -> int:
+        if entity not in ["people", "projects"]:
+            raise ValueError(f"Invalid entity: {entity}")
+
+        count = 0
+        path = f"/{entity}"
+
+        res = self.get(
+            path, params={"count": self.page_size, "page": 1, "sortBy": "id"}
+        )
+
+        data = res["data"]
+        if len(data) == 0:
+            return count
+
+        count += len(data)
+        last_id = data[-1]["id"]
+        while len(data) == self.page_size:
+            res = self.get(
+                path,
+                params={"count": self.page_size, "sortBy": "id", "from": last_id},
+            )
+            data = res["data"]
+            # We need to decrease the count by 1 because the last item's id is used
+            # as the starting point for the next page, ie, already counted
+            count += len(data) - 1
+
+        return count
+
 
 class PeopleAPI:
     def __init__(self, client):
@@ -40,39 +69,19 @@ class PeopleAPI:
     def create():
         return PeopleAPI(EzekiaAPIClient())
 
-    def get_count(self):
-        count = 0
-
-        res = self.client.get(
-            "/people", params={"count": self.page_size, "page": 1, "sortBy": "id"}
-        )
-
-        data = res["data"]
-        if len(data) == 0:
-            return count
-
-        count += len(data)
-        last_id = data[-1]["id"]
-        while len(data) == self.page_size:
-            res = self.client.get(
-                "/people",
-                params={"count": self.page_size, "sortBy": "id", "from": last_id},
-            )
-            data = res["data"]
-            count += len(data)
-
-        return count
+    def get_count(self) -> int:
+        return self.client._get_count("people")
 
     def get_all(self):
         pass
 
 
 class ProjectsAPI:
-    def __init__(self):
-        self.client = EzekiaAPIClient()
+    def __init__(self, client):
+        self.client = client
 
     def get_count(self):
-        pass
+        return self.client._get_count("projects")
 
     def get_all(self):
         pass

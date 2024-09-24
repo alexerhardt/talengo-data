@@ -44,9 +44,10 @@ def test_get_count_exact_page_size(people_api, mock_get):
     Test that get_count correctly handles data exactly equal to page_size.
     """
     page_size = people_api.page_size
-    data = [{"id": i} for i in range(1, page_size + 1)]
+    first_page = [{"id": i} for i in range(1, page_size + 1)]
+    second_page = [{"id": page_size}]
 
-    mock_get.side_effect = [{"data": data}, {"data": []}]
+    mock_get.side_effect = [{"data": first_page}, {"data": second_page}]
 
     count = people_api.get_count()
     assert count == page_size
@@ -59,10 +60,12 @@ def test_get_count_multiple_pages(people_api, mock_get):
     """
     page_size = people_api.page_size
 
+    # The next page starts with the previous id, this is due to Ezekia API limitations
+    # Ids per page: 1 [1-200]; 2 [200, 399]; 3 [399, 409]
     data_page_1 = [{"id": i} for i in range(1, page_size + 1)]
-    data_page_2 = [{"id": i} for i in range(page_size + 1, 2 * page_size + 1)]
-    data_page_3 = [{"id": i} for i in range(2 * page_size + 1, 2 * page_size + 51)]
-    total_count = page_size * 2 + 50
+    data_page_2 = [{"id": i} for i in range(page_size, 2 * page_size)]
+    data_page_3 = [{"id": i} for i in range(2 * page_size - 1, 2 * page_size + 10)]
+    total_count = page_size * 2 + 9
 
     mock_get.side_effect = [
         {"data": data_page_1},
@@ -81,16 +84,20 @@ def test_get_count_multiple_full_pages(people_api, mock_get):
     """
     page_size = people_api.page_size
 
+    # The next page starts with the previous id, this is due to Ezekia API limitations
+    # Ids per page: 1 [1-200]; 2 [200, 399]; 3 [399, 599]; 4 [599, 600]
+    # TODO: Could abstract this into a generator function
     data_page_1 = [{"id": i} for i in range(1, page_size + 1)]
-    data_page_2 = [{"id": i} for i in range(page_size + 1, 2 * page_size + 1)]
-    data_page_3 = [{"id": i} for i in range(2 * page_size + 1, 3 * page_size + 1)]
-    total_count = page_size * 3
+    data_page_2 = [{"id": i} for i in range(page_size, 2 * page_size)]
+    data_page_3 = [{"id": i} for i in range(2 * page_size - 1, 3 * page_size - 1)]
+    data_page_4 = [{"id": 598}, {"id": 599}, {"id": 600}]
+    total_count = 600
 
     mock_get.side_effect = [
         {"data": data_page_1},
         {"data": data_page_2},
         {"data": data_page_3},
-        {"data": []},  # Last call returns empty data
+        {"data": data_page_4},  # Last call returns empty data
     ]
 
     count = people_api.get_count()
