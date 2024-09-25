@@ -12,22 +12,26 @@ class BaseAPIClient:
     def _get_full_url(self, endpoint):
         return f"{self.base_url}{endpoint}"
 
+    def _handle_response(self, response):
+        response.raise_for_status()
+        return response.json()
+
     def get(self, endpoint, params=None):
         url = self._get_full_url(endpoint)
         response = requests.get(url, headers=self.headers, params=params)
-        return response.json()
+        return self._handle_response(response)
 
     def post(self, endpoint, data=None):
         url = self._get_full_url(endpoint)
         response = requests.post(url, headers=self.headers, json=data)
-        return response.json()
+        return self._handle_response(response)
 
     def put(self, endpoint, data=None):
         url = self._get_full_url(endpoint)
         response = requests.put(url, headers=self.headers, json=data)
-        return response.json()
+        return self._handle_response(response)
 
     def delete(self, endpoint):
         url = self._get_full_url(endpoint)
         response = requests.delete(url, headers=self.headers)
-        return response.json()
+        return self._handle_response(response)
