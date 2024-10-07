@@ -1,4 +1,11 @@
 def copy_user_to_employee(sf, env="sandbox"):
+    """
+    Copies user to employee in Equipo_de_trabajo__c
+
+    :param sf: Salesforce instance
+    :param env: Whether the environment is sandbox or production
+    :return:
+    """
     query = "SELECT Id, Usuario__r.Email FROM Equipo_de_trabajo__c"
     records = sf.query_all(query)["records"]
 
@@ -8,8 +15,10 @@ def copy_user_to_employee(sf, env="sandbox"):
             continue
 
         email = record["Usuario__r"]["Email"]
+
         if env == "sandbox":
             email = email.replace(".invalid", "")
+
         contact = sf.query(f"SELECT Id FROM Contact WHERE Email = '{email}'")["records"]
 
         if not contact:
