@@ -46,7 +46,7 @@ def copy_user_to_employee(sf, env="sandbox"):
 
 
 if __name__ == "__main__":
-    from config import get_sf_sandbox
+    from config import get_sf_sandbox, get_sf_prod
 
     sf = get_sf_sandbox()
     copy_user_to_employee(sf)

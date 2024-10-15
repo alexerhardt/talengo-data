@@ -15,7 +15,6 @@ def change_employee_record_types(sf):
     contacts_query = "SELECT Id, Tipo__c FROM Contact WHERE Tipo__c = 'Empleado'"
     contacts_result = sf.query_all(contacts_query)
 
-    # Loop through and update each contact with the 'Empleado' RecordType
     for contact in contacts_result["records"]:
         contact_id = contact["Id"]
         update_data = {"RecordTypeId": record_type_id}
