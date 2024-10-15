@@ -60,3 +60,15 @@ def test_account_name(sf_id, sf_records, ez_records):
     sf_record = next(r for r in sf_records if r["Id"] == sf_id)
     ez_record = ez_records[sf_id]
     assert sf_record["Name"] == ez_record["name"], f"Name mismatch for account {sf_id}"
+
+
+@pytest.mark.parametrize("sf_id", account_ids)
+def test_account_description(sf_id, sf_records, ez_records):
+    """
+    Test that the account description matches between Salesforce and Ezekia.
+    """
+    sf_record = next(r for r in sf_records if r["Id"] == sf_id)
+    ez_record = ez_records[sf_id]
+    assert (
+        sf_record["Description"] == ez_record["description"]
+    ), f"Description mismatch for account {sf_id}"
