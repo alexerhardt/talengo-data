@@ -9,7 +9,21 @@ load_dotenv()
 DEFAULT_PAGE_SIZE = 500
 
 
+class NotFoundException(Exception):
+    pass
+
+
+class DuplicateFoundException(Exception):
+    pass
+
+
 class EzekiaAPIClient(BaseAPIClient):
+    """
+    Client for the Ezekia API.
+    We use delegation to separate the different API endpoints, and allowing access like:
+    ezekia.entity_name.method_name()
+    """
+
     def __init__(self, page_size=DEFAULT_PAGE_SIZE):
         EZEKIA_TOKEN = os.getenv("EZEKIA_SANDBOX_TOKEN")
         EZEKIA_SANDBOX_BASE_API = "https://migrations2.ezekia.com/api"
@@ -18,6 +32,7 @@ class EzekiaAPIClient(BaseAPIClient):
         self._people = None
         self._projects = None
         self._companies = None
+        self._off_limits = None
 
     @property
     def people(self):
@@ -36,6 +51,12 @@ class EzekiaAPIClient(BaseAPIClient):
         if self._companies is None:
             self._companies = CompaniesAPI(self)
         return self._companies
+
+    @property
+    def off_limits(self):
+        if self._off_limits is None:
+            self._off_limits = OffLimitsAPI(self)
+        return self._off_limits
 
     def _get_count(self, entity: str) -> int:
         # if entity not in ["people", "projects"]:
@@ -114,12 +135,30 @@ class CompaniesAPI:
             },
         )
         if len(res["data"]) > 1:
-            raise ValueError(
+            raise DuplicateFoundException(
                 f"Multiple companies found with salesforceId: {salesforce_id}"
             )
+        # Ezekia API does not return 404 on not found
         if not res["data"]:
-            raise ValueError(f"No company found with salesforceId: {salesforce_id}")
+            raise NotFoundException(
+                f"No company found with salesforceId: {salesforce_id}"
+            )
         return res["data"][0]
+
+    def get_by_salesforce_id_list(self, salesforce_ids: list) -> dict:
+        """
+        Retrieves a list of companies by Salesforce ID.
+        If a company is not found, the value will be None.
+        :param salesforce_ids:
+        :return: Map of Salesforce ID to company data
+        """
+        result = {}
+        for salesforce_id in salesforce_ids:
+            try:
+                result[salesforce_id] = self.get_by_salesforce_id(salesforce_id)
+            except NotFoundException:
+                result[salesforce_id] = None
+        return result
 
 
 class ProjectsAPI:
@@ -131,3 +170,56 @@ class ProjectsAPI:
 
     def get_all(self):
         pass
+
+
+class OffLimitsAPI:
+    def __init__(self, client):
+        self.client = client
+
+    def get_count(self):
+        pass
+
+    def get_all_for_companies(self):
+        """
+        Get all off-limits agreements for all companies.
+        :return:
+        """
+        res = self.client.get("/off-limits/agreements/companies")
+        return res["data"]
+
+    def get_by_company_id(self, company_id: str):
+        """
+        Get all off-limit agreements for a specific company.
+        :param company_id:
+        :return: A list of off-limit agreements
+        """
+        res = self.client.get(
+            f"/off-limits/agreements/companies/{company_id}",
+        )
+        if not res["data"]:
+            raise NotFoundException(f"No off limits found with companyId: {company_id}")
+        # I don't know how this could happen, it'd be undocumented behavior
+        if len(res["data"]) > 1:
+            raise DuplicateFoundException(
+                f"Multiple off limits found with companyId: {company_id}"
+            )
+        return res["data"][0]
+
+    def get_by_list_of_salesforce_company_ids(self, salesforce_company_ids: list):
+        """
+        Get all off-limit agreements for a list of companies by salesforce IDs.
+        Fetches first the company ID from the salesforce ID.
+        :param salesforce_company_ids:
+        :return: A list of off-limit agreements
+        """
+        result = {}
+        for salesforce_id in salesforce_company_ids:
+            # This will raise NotFoundException if not found
+            # Expected, because we assume company exists and should fail loudly
+            company = self.client.companies.get_by_salesforce_id(salesforce_id)
+            company_id = company["id"]
+            try:
+                result[salesforce_id] = self.get_by_company_id(company_id)
+            except NotFoundException:
+                result[salesforce_id] = None
+        return result
