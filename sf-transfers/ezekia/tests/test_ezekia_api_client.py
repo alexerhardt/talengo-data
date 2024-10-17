@@ -1,8 +1,4 @@
-import os
 import pytest
-from unittest.mock import patch
-
-# Import the classes from your module
 from ezekia.api import (
     EzekiaAPIClient,
     PeopleAPI,
