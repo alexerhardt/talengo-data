@@ -31,6 +31,11 @@ class BaseAPIClient:
         response = requests.put(url, headers=self.headers, json=data)
         return self._handle_response(response)
 
+    def patch(self, endpoint, data=None):
+        url = self._get_full_url(endpoint)
+        response = requests.patch(url, headers=self.headers, json=data)
+        return self._handle_response(response)
+
     def delete(self, endpoint):
         url = self._get_full_url(endpoint)
         response = requests.delete(url, headers=self.headers)
