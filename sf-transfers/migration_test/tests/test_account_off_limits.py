@@ -4,27 +4,50 @@ from ezekia.api import EzekiaAPIClient
 
 sf = get_sf_prod()
 query = f"""
-SELECT Id, Off_limit__c, Fecha_de_fin_off_limit__c, Descripcion_de_los_off_limit_de_contacto__c 
+SELECT Id, Name, Off_limit__c, Fecha_de_fin_off_limit__c, Descripcion_de_los_Off_limit_de_Contacto__c
 FROM Account 
-WHERE Off_limit__c = True
+WHERE Off_limit__c = True AND Fecha_de_fin_off_limit__c >= TODAY
 """
 sf_records = sf.query(query)["records"]
+sf_records_map = {r["Id"]: r for r in sf_records}
 
 ezekia = EzekiaAPIClient()
-sf_to_ezekia_mapped_off_limits = (
-    ezekia.off_limits.get_by_list_of_salesforce_company_ids(
-        [r["Id"] for r in sf_records]
-    )
+sf_id_ezekia_off_limits_map = ezekia.off_limits.get_by_list_of_salesforce_company_ids(
+    [r["Id"] for r in sf_records]
 )
 all_ezekia_off_limits = ezekia.off_limits.get_all_for_companies()
 
 
-@pytest.mark.parametrize("sf_id", sf_to_ezekia_mapped_off_limits)
+def id_func(sf_id):
+    """
+    Test helper to get a string representation of a Salesforce ID.
+    :param sf_id:
+    :return:
+    """
+    company_name = sf_records_map.get(sf_id, {}).get("Name", "Unknown")
+    return f"{company_name} (SF Id: {sf_id})"
+
+
+@pytest.mark.parametrize("sf_id", sf_id_ezekia_off_limits_map, ids=id_func)
 def test_off_limits_found(sf_id):
-    # Check that the value for the mapped Salesforce ID exists and is not None
-    assert sf_to_ezekia_mapped_off_limits[sf_id], f"Record with ID {sf_id} is missing"
+    assert sf_id_ezekia_off_limits_map[sf_id], f"Off-limits not found"
 
 
-@pytest.mark.parametrize("ez_ol", all_ezekia_off_limits)
-def test_no_extraneous_off_limits(ez_ol, sf_records):
-    pass
+def test_count():
+    assert len(sf_records) == len(all_ezekia_off_limits)
+
+
+@pytest.mark.parametrize("sf_id", sf_id_ezekia_off_limits_map, ids=id_func)
+def test_end_dates_match(sf_id):
+    assert (
+        sf_id_ezekia_off_limits_map[sf_id]["endDate"]
+        == sf_records_map[sf_id]["Fecha_de_fin_off_limit__c"]
+    )
+
+
+@pytest.mark.parametrize("sf_id", sf_id_ezekia_off_limits_map, ids=id_func)
+def test_descriptions_match(sf_id):
+    assert (
+        sf_id_ezekia_off_limits_map[sf_id]["description"]
+        == sf_records_map[sf_id]["Descripcion_de_los_Off_limit_de_Contacto__c"]
+    )
