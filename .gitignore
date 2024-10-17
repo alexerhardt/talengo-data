@@ -1,3 +1,6 @@
+# Ignore cache folder under tests
+tests/.cache/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

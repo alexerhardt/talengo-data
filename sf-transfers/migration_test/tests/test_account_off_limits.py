@@ -1,20 +1,35 @@
+from pathlib import Path
 import pytest
+from joblib import Memory
 from config import get_sf_prod
 from ezekia.api import EzekiaAPIClient
 
+memory = Memory(Path(__file__).parent / "cache" / "account_off_limits", verbose=0)
+
+
+@memory.cache
+def get_sf_records(sf):
+    query = f"""
+    SELECT Id, Name, Off_limit__c, Fecha_de_fin_off_limit__c, Descripcion_de_los_Off_limit_de_Contacto__c
+    FROM Account 
+    WHERE Off_limit__c = True AND Fecha_de_fin_off_limit__c >= TODAY
+    """
+    return sf.query(query)["records"]
+
+
+@memory.cache
+def get_sf_id_ezekia_off_limits_map(ez, sf_records):
+    return ez.off_limits.get_by_list_of_salesforce_company_ids(
+        [r["Id"] for r in sf_records]
+    )
+
+
 sf = get_sf_prod()
-query = f"""
-SELECT Id, Name, Off_limit__c, Fecha_de_fin_off_limit__c, Descripcion_de_los_Off_limit_de_Contacto__c
-FROM Account 
-WHERE Off_limit__c = True AND Fecha_de_fin_off_limit__c >= TODAY
-"""
-sf_records = sf.query(query)["records"]
+sf_records = get_sf_records(sf)
 sf_records_map = {r["Id"]: r for r in sf_records}
 
 ezekia = EzekiaAPIClient()
-sf_id_ezekia_off_limits_map = ezekia.off_limits.get_by_list_of_salesforce_company_ids(
-    [r["Id"] for r in sf_records]
-)
+sf_id_ezekia_off_limits_map = get_sf_id_ezekia_off_limits_map(ezekia, sf_records)
 all_ezekia_off_limits = ezekia.off_limits.get_all_for_companies()
 
 
