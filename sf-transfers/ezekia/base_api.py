@@ -1,4 +1,5 @@
 import requests
+from functools import wraps
 
 
 class BaseAPIClient:
@@ -16,27 +17,27 @@ class BaseAPIClient:
         response.raise_for_status()
         return response.json()
 
-    def get(self, endpoint, params=None):
+    def get(self, endpoint, **kwargs):
         url = self._get_full_url(endpoint)
-        response = requests.get(url, headers=self.headers, params=params)
+        response = requests.get(url, headers=self.headers, **kwargs)
         return self._handle_response(response)
 
-    def post(self, endpoint, data=None):
+    def post(self, endpoint, **kwargs):
         url = self._get_full_url(endpoint)
-        response = requests.post(url, headers=self.headers, json=data)
+        response = requests.post(url, headers=self.headers, **kwargs)
         return self._handle_response(response)
 
-    def put(self, endpoint, data=None):
+    def put(self, endpoint, **kwargs):
         url = self._get_full_url(endpoint)
-        response = requests.put(url, headers=self.headers, json=data)
+        response = requests.put(url, headers=self.headers, **kwargs)
         return self._handle_response(response)
 
-    def patch(self, endpoint, data=None):
+    def patch(self, endpoint, **kwargs):
         url = self._get_full_url(endpoint)
-        response = requests.patch(url, headers=self.headers, json=data)
+        response = requests.patch(url, headers=self.headers, **kwargs)
         return self._handle_response(response)
 
-    def delete(self, endpoint):
+    def delete(self, endpoint, **kwargs):
         url = self._get_full_url(endpoint)
-        response = requests.delete(url, headers=self.headers)
+        response = requests.delete(url, headers=self.headers, **kwargs)
         return self._handle_response(response)
