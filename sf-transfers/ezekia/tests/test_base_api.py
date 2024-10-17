@@ -46,7 +46,7 @@ def test_method_called_with_auth_header(method, mocker):
     token = "test_token"
     client = BaseAPIClient(base_url, token)
 
-    mock_method = mocker.patch(f'requests.{method["name"]}')
+    mock_method = mocker.patch(f"requests.Session.request")
     mock_method.return_value.status_code = 200
     mock_method.return_value.json.return_value = {}
 
@@ -67,7 +67,7 @@ def test_kwargs_passed_to_request(method, mocker):
     token = "test_token"
     client = BaseAPIClient(base_url, token)
 
-    mock_method = mocker.patch(f'requests.{method["name"]}')
+    mock_method = mocker.patch(f"requests.Session.request")
     mock_method.return_value.status_code = 200
     mock_method.return_value.json.return_value = {}
 
@@ -88,7 +88,7 @@ def test_response_returned_as_dict(method, mocker):
     token = "test_token"
     client = BaseAPIClient(base_url, token)
 
-    mock_method = mocker.patch(f'requests.{method["name"]}')
+    mock_method = mocker.patch(f"requests.Session.request")
     mock_method.return_value.status_code = 200
     mock_method.return_value.json.return_value = {"key": "value"}
 
