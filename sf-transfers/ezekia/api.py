@@ -9,6 +9,10 @@ load_dotenv()
 DEFAULT_PAGE_SIZE = 500
 
 
+class ConfigurationError(Exception):
+    pass
+
+
 class NotFoundException(Exception):
     pass
 
@@ -25,9 +29,16 @@ class EzekiaAPIClient(BaseAPIClient):
     """
 
     def __init__(self, page_size=DEFAULT_PAGE_SIZE):
-        EZEKIA_TOKEN = os.getenv("EZEKIA_SANDBOX_TOKEN")
-        EZEKIA_SANDBOX_BASE_API = "https://migrations2.ezekia.com/api"
-        super().__init__(EZEKIA_SANDBOX_BASE_API, EZEKIA_TOKEN)
+        base_url = os.getenv("BASE_URL")
+        if not base_url:
+            raise ConfigurationError("BASE_URL not set in environment variables.")
+
+        token = os.getenv("SECURITY_TOKEN")
+        if not token:
+            raise ConfigurationError("SECURITY_TOKEN not set in environment variables.")
+
+        super().__init__(base_url, token)
+
         self.page_size = page_size
         self._people = None
         self._projects = None
@@ -106,6 +117,25 @@ class PeopleAPI:
     def get_all(self):
         pass
 
+    def get_by_salesforce_id(self, salesforce_id: str):
+        res = self.client.get(
+            "/v3/people",
+            params={
+                "query": salesforce_id,
+                "filterOn": ["customField"],
+                "fields": ["manager.customValues"],
+                "fuzzy": False,
+            },
+        )
+        if len(res["data"]) > 1:
+            raise DuplicateFoundException(
+                f"Multiple people found with salesforceId: {salesforce_id}"
+            )
+        # Ezekia API does not return 404 on not found
+        if not res["data"]:
+            raise NotFoundException(f"No people with salesforceId: {salesforce_id}")
+        return res["data"][0]
+
     def get_by_email(self, email: str):
         res = self.client.get(
             "/v3/people", params={"query": email, "filterOn": ["email"]}
@@ -132,6 +162,7 @@ class CompaniesAPI:
                 "query": salesforce_id,
                 "filterOn": ["customField"],
                 "fields": ["manager.customValues"],
+                "fuzzy": False,
             },
         )
         if len(res["data"]) > 1:
@@ -187,6 +218,14 @@ class OffLimitsAPI:
         res = self.client.get("/off-limits/agreements/companies")
         return res["data"]
 
+    def get_all_for_people(self):
+        """
+        Get all off-limits agreements for all people.
+        :return:
+        """
+        res = self.client.get("/off-limits/agreements/people")
+        return res["data"]
+
     def get_by_company_id(self, company_id: str):
         """
         Get all off-limit agreements for a specific company.
@@ -205,6 +244,24 @@ class OffLimitsAPI:
             )
         return res["data"][0]
 
+    def get_by_person_id(self, person_id: str):
+        """
+        Get all off-limit agreements for a specific person.
+        :param person_id:
+        :return: A list of off-limit agreements
+        """
+        res = self.client.get(
+            f"/off-limits/agreements/people/{person_id}",
+        )
+        if not res["data"]:
+            raise NotFoundException(f"No off limits found with personId: {person_id}")
+        # I don't know how this could happen, it'd be undocumented behavior
+        if len(res["data"]) > 1:
+            raise DuplicateFoundException(
+                f"Multiple off limits found with personId: {person_id}"
+            )
+        return res["data"][0]
+
     def get_by_list_of_salesforce_company_ids(self, salesforce_company_ids: list):
         """
         Get all off-limit agreements for a list of companies by salesforce IDs.
@@ -220,6 +277,25 @@ class OffLimitsAPI:
             company_id = company["id"]
             try:
                 result[salesforce_id] = self.get_by_company_id(company_id)
+            except NotFoundException:
+                result[salesforce_id] = None
+        return result
+
+    def get_by_list_of_salesforce_person_ids(self, salesforce_person_ids: list):
+        """
+        Get all off-limit agreements for a list of people by salesforce IDs.
+        Fetches first the person ID from the salesforce ID.
+        :param salesforce_person_ids:
+        :return: A list of off-limit agreements
+        """
+        result = {}
+        for salesforce_id in salesforce_person_ids:
+            # This will raise NotFoundException if not found
+            # Expected, because we assume person exists and should fail loudly
+            person = self.client.people.get_by_salesforce_id(salesforce_id)
+            person_id = person["id"]
+            try:
+                result[salesforce_id] = self.get_by_person_id(person_id)
             except NotFoundException:
                 result[salesforce_id] = None
         return result
