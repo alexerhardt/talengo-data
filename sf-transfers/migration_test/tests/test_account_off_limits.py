@@ -4,7 +4,7 @@ from joblib import Memory
 from config import get_sf_prod
 from ezekia.api import EzekiaAPIClient
 
-memory = Memory(Path(__file__).parent / "cache" / "account_off_limits", verbose=0)
+memory = Memory(Path(__file__).parent / ".cache" / "account_off_limits", verbose=0)
 
 
 @memory.cache
@@ -18,8 +18,8 @@ def get_sf_records(sf):
 
 
 @memory.cache
-def get_sf_id_ezekia_off_limits_map(ez, sf_records):
-    return ez.off_limits.get_by_list_of_salesforce_company_ids(
+def get_sf_id_ezekia_off_limits_map(sf_records):
+    return EzekiaAPIClient().off_limits.get_by_list_of_salesforce_company_ids(
         [r["Id"] for r in sf_records]
     )
 
@@ -28,9 +28,8 @@ sf = get_sf_prod()
 sf_records = get_sf_records(sf)
 sf_records_map = {r["Id"]: r for r in sf_records}
 
-ezekia = EzekiaAPIClient()
-sf_id_ezekia_off_limits_map = get_sf_id_ezekia_off_limits_map(ezekia, sf_records)
-all_ezekia_off_limits = ezekia.off_limits.get_all_for_companies()
+sf_id_ezekia_off_limits_map = get_sf_id_ezekia_off_limits_map(sf_records)
+all_ezekia_off_limits = EzekiaAPIClient().off_limits.get_all_for_companies()
 
 
 def id_func(sf_id):
