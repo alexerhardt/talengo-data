@@ -247,7 +247,7 @@ class OffLimitsAPI:
     def get_by_person_id(self, person_id: str):
         """
         Get all off-limit agreements for a specific person.
-        :param person_id:
+        :param person_id: The person id in Salesforce
         :return: A list of off-limit agreements
         """
         res = self.client.get(
@@ -255,12 +255,17 @@ class OffLimitsAPI:
         )
         if not res["data"]:
             raise NotFoundException(f"No off limits found with personId: {person_id}")
+
+        # The API returns off-limits for a person, but also the company ones applying
+        # We could make it optional to return with/without; this is good for now
+        person_off_limits = [r for r in res["data"] if r["agreementType"] == "person"]
         # I don't know how this could happen, it'd be undocumented behavior
-        if len(res["data"]) > 1:
+        if len(person_off_limits) > 1:
             raise DuplicateFoundException(
                 f"Multiple off limits found with personId: {person_id}"
             )
-        return res["data"][0]
+
+        return person_off_limits[0]
 
     def get_by_list_of_salesforce_company_ids(self, salesforce_company_ids: list):
         """
